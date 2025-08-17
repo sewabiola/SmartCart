@@ -10,6 +10,9 @@ interface ShoppingItemDao {
     @Query("SELECT * FROM shopping_items WHERE listId = :listId ORDER BY sortOrder ASC, createdAt ASC")
     fun getItemsForList(listId: Int): Flow<List<ShoppingItemEntity>>
     
+    @Query("SELECT * FROM shopping_items WHERE listId = :listId ORDER BY sortOrder ASC, createdAt ASC")
+    suspend fun getItemsForListSync(listId: Int): List<ShoppingItemEntity>
+    
     @Query("SELECT * FROM shopping_items WHERE id = :id")
     suspend fun getItemById(id: Int): ShoppingItemEntity?
     

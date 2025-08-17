@@ -71,7 +71,11 @@ class SmartCartRepository(
     }
     
     suspend fun insertItem(item: ShoppingItemEntity): Long {
-        return itemDao.insertItem(item)
+        // Get the next sort order for this list
+        val existingItems = itemDao.getItemsForListSync(item.listId)
+        val nextSortOrder = (existingItems.maxOfOrNull { it.sortOrder } ?: 0) + 1
+        
+        return itemDao.insertItem(item.copy(sortOrder = nextSortOrder))
     }
     
     suspend fun updateItem(item: ShoppingItemEntity) {
@@ -127,6 +131,35 @@ class SmartCartRepository(
     
     suspend fun getCategoryCount(): Int {
         return categoryDao.getCategoryCount()
+    }
+    
+    // Item Reordering
+    suspend fun moveItemUp(listId: Int, itemId: Int) {
+        val allItems = itemDao.getItemsForListSync(listId).sortedBy { it.sortOrder }
+        val currentIndex = allItems.indexOfFirst { it.id == itemId }
+        
+        if (currentIndex > 0) {
+            val currentItem = allItems[currentIndex]
+            val previousItem = allItems[currentIndex - 1]
+            
+            // Swap sort orders
+            itemDao.updateItem(currentItem.copy(sortOrder = previousItem.sortOrder, updatedAt = Date()))
+            itemDao.updateItem(previousItem.copy(sortOrder = currentItem.sortOrder, updatedAt = Date()))
+        }
+    }
+    
+    suspend fun moveItemDown(listId: Int, itemId: Int) {
+        val allItems = itemDao.getItemsForListSync(listId).sortedBy { it.sortOrder }
+        val currentIndex = allItems.indexOfFirst { it.id == itemId }
+        
+        if (currentIndex < allItems.size - 1) {
+            val currentItem = allItems[currentIndex]
+            val nextItem = allItems[currentIndex + 1]
+            
+            // Swap sort orders
+            itemDao.updateItem(currentItem.copy(sortOrder = nextItem.sortOrder, updatedAt = Date()))
+            itemDao.updateItem(nextItem.copy(sortOrder = currentItem.sortOrder, updatedAt = Date()))
+        }
     }
 }
 

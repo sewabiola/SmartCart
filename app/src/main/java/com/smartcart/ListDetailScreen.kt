@@ -1,14 +1,18 @@
 package com.smartcart
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -118,15 +122,23 @@ fun ListDetailScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(shoppingItems) { item ->
+                    itemsIndexed(shoppingItems) { index, item ->
                         ShoppingItemCard(
                             item = item,
+                            canMoveUp = index > 0,
+                            canMoveDown = index < shoppingItems.size - 1,
                             onToggleComplete = { itemId ->
                                 viewModel.toggleItemCompleted(itemId)
                             },
                             onEdit = { itemToEdit ->
                                 editingItem = itemToEdit
                                 showEditDialog = true
+                            },
+                            onMoveUp = { itemId ->
+                                viewModel.moveItemUp(listId, itemId)
+                            },
+                            onMoveDown = { itemId ->
+                                viewModel.moveItemDown(listId, itemId)
                             },
                             onDelete = { itemId ->
                                 viewModel.deleteItem(itemId)
@@ -177,8 +189,12 @@ fun ListDetailScreen(
 @Composable
 fun ShoppingItemCard(
     item: ShoppingItemEntity,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
     onToggleComplete: (Int) -> Unit,
     onEdit: (ShoppingItemEntity) -> Unit,
+    onMoveUp: (Int) -> Unit,
+    onMoveDown: (Int) -> Unit,
     onDelete: (Int) -> Unit
 ) {
     Card(
@@ -243,6 +259,30 @@ fun ShoppingItemCard(
                         text = " • ${item.quantity}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
+            
+            // Reordering buttons
+            Column {
+                IconButton(
+                    onClick = { onMoveUp(item.id) },
+                    enabled = canMoveUp
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowUp,
+                        contentDescription = "Move Up",
+                        tint = if (canMoveUp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                    )
+                }
+                IconButton(
+                    onClick = { onMoveDown(item.id) },
+                    enabled = canMoveDown
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Move Down",
+                        tint = if (canMoveDown) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                     )
                 }
             }

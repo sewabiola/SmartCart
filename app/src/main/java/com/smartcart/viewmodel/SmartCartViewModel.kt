@@ -135,4 +135,17 @@ class SmartCartViewModel(application: Application) : AndroidViewModel(applicatio
             repository.deleteCategoryById(categoryId)
         }
     }
+    
+    // Item Reordering
+    fun moveItemUp(listId: Int, itemId: Int) {
+        viewModelScope.launch {
+            repository.moveItemUp(listId, itemId)
+        }
+    }
+    
+    fun moveItemDown(listId: Int, itemId: Int) {
+        viewModelScope.launch {
+            repository.moveItemDown(listId, itemId)
+        }
+    }
 }
