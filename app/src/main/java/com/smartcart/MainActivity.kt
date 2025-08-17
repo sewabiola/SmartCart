@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,8 +34,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            SmartCartTheme {
-                SmartCartApp()
+            var isDarkTheme by remember { mutableStateOf(false) }
+            
+            SmartCartTheme(darkTheme = isDarkTheme) {
+                SmartCartApp(
+                    isDarkTheme = isDarkTheme,
+                    onThemeToggle = { isDarkTheme = !isDarkTheme }
+                )
             }
         }
     }
@@ -41,7 +48,10 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SmartCartApp() {
+fun SmartCartApp(
+    isDarkTheme: Boolean = false,
+    onThemeToggle: () -> Unit = {}
+) {
     val context = LocalContext.current
     val viewModel: SmartCartViewModel = viewModel()
     
@@ -74,12 +84,18 @@ fun SmartCartApp() {
     when (currentScreen) {
         "main" -> MainScreen(
             shoppingLists = shoppingLists,
+            isDarkTheme = isDarkTheme,
+            onThemeToggle = onThemeToggle,
             onListClick = { list ->
                 selectedList = list
                 currentScreen = "detail"
             },
             onAddList = {
                 viewModel.insertList("New List")
+            },
+            onEditList = { listId, newName ->
+                val listToEdit = shoppingLists.find { it.id == listId }
+                listToEdit?.let { viewModel.updateList(it, newName) }
             },
             onDeleteList = { listId ->
                 viewModel.deleteList(listId)
@@ -102,10 +118,15 @@ fun SmartCartApp() {
 @Composable
 fun MainScreen(
     shoppingLists: List<ShoppingListWithItemCount>,
+    isDarkTheme: Boolean,
+    onThemeToggle: () -> Unit,
     onListClick: (ShoppingListWithItemCount) -> Unit,
     onAddList: () -> Unit,
+    onEditList: (Int, String) -> Unit,
     onDeleteList: (Int) -> Unit
 ) {
+    var editingList by remember { mutableStateOf<ShoppingListWithItemCount?>(null) }
+    var showEditDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -120,6 +141,14 @@ fun MainScreen(
                             modifier = Modifier.padding(end = 8.dp)
                         )
                         Text("SmartCart")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onThemeToggle) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = if (isDarkTheme) "Switch to Light Theme" else "Switch to Dark Theme"
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -180,6 +209,10 @@ fun MainScreen(
                         onListClick = { 
                             onListClick(list)
                         },
+                        onEditClick = { listId, currentName ->
+                            editingList = list
+                            showEditDialog = true
+                        },
                         onDeleteClick = {
                             onDeleteList(list.id)
                         }
@@ -188,6 +221,22 @@ fun MainScreen(
             }
         }
     }
+    
+    // Edit List Dialog
+    if (showEditDialog && editingList != null) {
+        EditListDialog(
+            listName = editingList!!.name,
+            onDismiss = { 
+                showEditDialog = false
+                editingList = null
+            },
+            onSave = { newName ->
+                onEditList(editingList!!.id, newName)
+                showEditDialog = false
+                editingList = null
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -195,6 +244,7 @@ fun MainScreen(
 fun ShoppingListCard(
     shoppingList: ShoppingListWithItemCount,
     onListClick: () -> Unit,
+    onEditClick: (Int, String) -> Unit,
     onDeleteClick: () -> Unit
 ) {
     Card(
@@ -224,8 +274,19 @@ fun ShoppingListCard(
                         MaterialTheme.colorScheme.outline
                     } else {
                         MaterialTheme.colorScheme.onSurface
-                    }
+                    },
+                    modifier = Modifier.weight(1f)
                 )
+                
+                IconButton(
+                    onClick = { onEditClick(shoppingList.id, shoppingList.name) }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit List",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
                 
                 TextButton(onClick = onDeleteClick) {
                     Text("Delete")
@@ -250,6 +311,45 @@ fun ShoppingListCard(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditListDialog(
+    listName: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var editedName by remember { mutableStateOf(listName) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit List Name") },
+        text = {
+            OutlinedTextField(
+                value = editedName,
+                onValueChange = { editedName = it },
+                label = { Text("List Name") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (editedName.isNotBlank()) {
+                        onSave(editedName)
+                    }
+                }
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Preview(showBackground = true)

@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,6 +36,8 @@ fun ListDetailScreen(
     val shoppingItems by viewModel.getItemsForList(listId).collectAsState(initial = emptyList())
     
     var showAddDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editingItem by remember { mutableStateOf<ShoppingItemEntity?>(null) }
 
     Scaffold(
         topBar = {
@@ -121,6 +124,10 @@ fun ListDetailScreen(
                             onToggleComplete = { itemId ->
                                 viewModel.toggleItemCompleted(itemId)
                             },
+                            onEdit = { itemToEdit ->
+                                editingItem = itemToEdit
+                                showEditDialog = true
+                            },
                             onDelete = { itemId ->
                                 viewModel.deleteItem(itemId)
                             }
@@ -146,6 +153,22 @@ fun ListDetailScreen(
             }
         )
     }
+    
+    // Edit Item Dialog
+    if (showEditDialog && editingItem != null) {
+        EditItemDialog(
+            item = editingItem!!,
+            onDismiss = { 
+                showEditDialog = false
+                editingItem = null
+            },
+            onSave = { updatedItem ->
+                viewModel.updateItem(updatedItem)
+                showEditDialog = false
+                editingItem = null
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -153,6 +176,7 @@ fun ListDetailScreen(
 fun ShoppingItemCard(
     item: ShoppingItemEntity,
     onToggleComplete: (Int) -> Unit,
+    onEdit: (ShoppingItemEntity) -> Unit,
     onDelete: (Int) -> Unit
 ) {
     Card(
@@ -221,6 +245,17 @@ fun ShoppingItemCard(
                 }
             }
             
+            // Edit button
+            IconButton(
+                onClick = { onEdit(item) }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Edit",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+            
             // Delete button
             IconButton(
                 onClick = { onDelete(item.id) }
@@ -244,6 +279,7 @@ fun AddItemDialog(
     var itemName by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("General") }
     var quantity by remember { mutableStateOf("1") }
+    var expanded by remember { mutableStateOf(false) }
     
     val categories = listOf(
         "General", "Fruits & Vegetables", "Dairy", "Meat", "Bakery", 
@@ -274,18 +310,35 @@ fun AddItemDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 ExposedDropdownMenuBox(
-                    expanded = false,
-                    onExpandedChange = { }
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
                 ) {
                     OutlinedTextField(
                         value = category,
                         onValueChange = { },
                         readOnly = true,
                         label = { Text("Category") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
                         modifier = Modifier
                             .fillMaxWidth()
                             .menuAnchor()
                     )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        categories.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    category = option
+                                    expanded = false
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
+                        }
+                    }
                 }
             }
         },
@@ -298,6 +351,103 @@ fun AddItemDialog(
                 }
             ) {
                 Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditItemDialog(
+    item: ShoppingItemEntity,
+    onDismiss: () -> Unit,
+    onSave: (ShoppingItemEntity) -> Unit
+) {
+    var itemName by remember { mutableStateOf(item.name) }
+    var category by remember { mutableStateOf(item.category) }
+    var quantity by remember { mutableStateOf(item.quantity) }
+    var expanded by remember { mutableStateOf(false) }
+    
+    val categories = listOf(
+        "General", "Fruits & Vegetables", "Dairy", "Meat", "Bakery", 
+        "Pantry", "Frozen", "Snacks", "Beverages", "Household"
+    )
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Item") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = itemName,
+                    onValueChange = { itemName = it },
+                    label = { Text("Item Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                OutlinedTextField(
+                    value = quantity,
+                    onValueChange = { quantity = it },
+                    label = { Text("Quantity") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = { },
+                        readOnly = true,
+                        label = { Text("Category") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        categories.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    category = option
+                                    expanded = false
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (itemName.isNotBlank()) {
+                        val updatedItem = item.copy(
+                            name = itemName,
+                            category = category,
+                            quantity = quantity
+                        )
+                        onSave(updatedItem)
+                    }
+                }
+            ) {
+                Text("Save")
             }
         },
         dismissButton = {
