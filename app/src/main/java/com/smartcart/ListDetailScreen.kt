@@ -1,0 +1,321 @@
+package com.smartcart
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.smartcart.data.entity.ShoppingItemEntity
+import com.smartcart.viewmodel.SmartCartViewModel
+import com.smartcart.ui.theme.SmartCartTheme
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ListDetailScreen(
+    listId: Int,
+    listName: String,
+    onBackClick: () -> Unit
+) {
+    val viewModel: SmartCartViewModel = viewModel()
+    
+    // Observe items for this list from database
+    val shoppingItems by viewModel.getItemsForList(listId).collectAsState(initial = emptyList())
+    
+    var showAddDialog by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(listName) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showAddDialog = true }
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add Item")
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Progress indicator
+            val completedItems = shoppingItems.count { it.isCompleted }
+            val totalItems = shoppingItems.size
+            val progress = if (totalItems > 0) completedItems.toFloat() / totalItems else 0f
+            
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "Progress: $completedItems / $totalItems completed",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = progress,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+            
+            if (shoppingItems.isEmpty()) {
+                // Empty state
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "No items in this list yet",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                        Text(
+                            text = "Tap + to add your first item",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+            } else {
+                // Items list
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(shoppingItems) { item ->
+                        ShoppingItemCard(
+                            item = item,
+                            onToggleComplete = { itemId ->
+                                viewModel.toggleItemCompleted(itemId)
+                            },
+                            onDelete = { itemId ->
+                                viewModel.deleteItem(itemId)
+                            }
+                        )
+                    }
+                    
+                    // Add some bottom padding for the FAB
+                    item {
+                        Spacer(modifier = Modifier.height(80.dp))
+                    }
+                }
+            }
+        }
+    }
+    
+    // Add Item Dialog
+    if (showAddDialog) {
+        AddItemDialog(
+            onDismiss = { showAddDialog = false },
+            onAddItem = { itemName, category, quantity ->
+                viewModel.insertItem(listId, itemName, category, quantity)
+                showAddDialog = false
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ShoppingItemCard(
+    item: ShoppingItemEntity,
+    onToggleComplete: (Int) -> Unit,
+    onDelete: (Int) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (item.isCompleted) {
+                MaterialTheme.colorScheme.surfaceVariant
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Checkbox
+            IconButton(
+                onClick = { onToggleComplete(item.id) }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = if (item.isCompleted) "Uncheck" else "Check",
+                    tint = if (item.isCompleted) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outline
+                    }
+                )
+            }
+            
+            // Item details
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp)
+            ) {
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    textDecoration = if (item.isCompleted) {
+                        TextDecoration.LineThrough
+                    } else {
+                        TextDecoration.None
+                    },
+                    color = if (item.isCompleted) {
+                        MaterialTheme.colorScheme.outline
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
+                )
+                
+                Row {
+                    Text(
+                        text = item.category,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = " • ${item.quantity}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
+            
+            // Delete button
+            IconButton(
+                onClick = { onDelete(item.id) }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddItemDialog(
+    onDismiss: () -> Unit,
+    onAddItem: (String, String, String) -> Unit
+) {
+    var itemName by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf("General") }
+    var quantity by remember { mutableStateOf("1") }
+    
+    val categories = listOf(
+        "General", "Fruits & Vegetables", "Dairy", "Meat", "Bakery", 
+        "Pantry", "Frozen", "Snacks", "Beverages", "Household"
+    )
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add New Item") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = itemName,
+                    onValueChange = { itemName = it },
+                    label = { Text("Item Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                OutlinedTextField(
+                    value = quantity,
+                    onValueChange = { quantity = it },
+                    label = { Text("Quantity") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                ExposedDropdownMenuBox(
+                    expanded = false,
+                    onExpandedChange = { }
+                ) {
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = { },
+                        readOnly = true,
+                        label = { Text("Category") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor()
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (itemName.isNotBlank()) {
+                        onAddItem(itemName, category, quantity)
+                    }
+                }
+            ) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ListDetailPreview() {
+    SmartCartTheme {
+        ListDetailScreen(
+            listId = 1,
+            listName = "Groceries",
+            onBackClick = { }
+        )
+    }
+}
