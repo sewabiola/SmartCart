@@ -1,5 +1,6 @@
 package com.smartcart.data.database
 
+import com.smartcart.data.entity.CategoryEntity
 import com.smartcart.data.entity.ShoppingItemEntity
 import com.smartcart.data.entity.ShoppingListEntity
 import com.smartcart.data.repository.SmartCartRepository
@@ -9,6 +10,25 @@ class DatabaseSeeder(private val repository: SmartCartRepository) {
     
     suspend fun seedDatabase() {
         // Check if database is already seeded
+        val categoryCount = repository.getCategoryCount()
+        
+        // Seed default categories if not already present
+        if (categoryCount == 0) {
+            val defaultCategories = listOf(
+                CategoryEntity(name = "General", isDefault = true),
+                CategoryEntity(name = "Fruits & Vegetables", color = "#4CAF50", isDefault = true),
+                CategoryEntity(name = "Dairy", color = "#2196F3", isDefault = true),
+                CategoryEntity(name = "Meat", color = "#F44336", isDefault = true),
+                CategoryEntity(name = "Bakery", color = "#FF9800", isDefault = true),
+                CategoryEntity(name = "Pantry", color = "#795548", isDefault = true),
+                CategoryEntity(name = "Frozen", color = "#00BCD4", isDefault = true),
+                CategoryEntity(name = "Snacks", color = "#E91E63", isDefault = true),
+                CategoryEntity(name = "Beverages", color = "#9C27B0", isDefault = true),
+                CategoryEntity(name = "Household", color = "#607D8B", isDefault = true)
+            )
+            repository.insertCategories(defaultCategories)
+        }
+        
         val lists = repository.getAllLists()
         
         // Create sample shopping lists

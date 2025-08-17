@@ -5,14 +5,16 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import android.content.Context
+import com.smartcart.data.dao.CategoryDao
 import com.smartcart.data.dao.ShoppingItemDao
 import com.smartcart.data.dao.ShoppingListDao
+import com.smartcart.data.entity.CategoryEntity
 import com.smartcart.data.entity.ShoppingItemEntity
 import com.smartcart.data.entity.ShoppingListEntity
 
 @Database(
-    entities = [ShoppingListEntity::class, ShoppingItemEntity::class],
-    version = 1,
+    entities = [ShoppingListEntity::class, ShoppingItemEntity::class, CategoryEntity::class],
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -20,6 +22,7 @@ abstract class SmartCartDatabase : RoomDatabase() {
     
     abstract fun shoppingListDao(): ShoppingListDao
     abstract fun shoppingItemDao(): ShoppingItemDao
+    abstract fun categoryDao(): CategoryDao
     
     companion object {
         @Volatile

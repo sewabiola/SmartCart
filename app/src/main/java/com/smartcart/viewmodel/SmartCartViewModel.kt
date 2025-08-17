@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartcart.data.database.SmartCartDatabase
+import com.smartcart.data.entity.CategoryEntity
 import com.smartcart.data.entity.ShoppingItemEntity
 import com.smartcart.data.entity.ShoppingListEntity
 import com.smartcart.data.repository.SmartCartRepository
@@ -20,7 +21,8 @@ class SmartCartViewModel(application: Application) : AndroidViewModel(applicatio
         val database = SmartCartDatabase.getDatabase(application)
         repository = SmartCartRepository(
             database.shoppingListDao(),
-            database.shoppingItemDao()
+            database.shoppingItemDao(),
+            database.categoryDao()
         )
     }
     
@@ -104,6 +106,33 @@ class SmartCartViewModel(application: Application) : AndroidViewModel(applicatio
     fun toggleItemCompleted(itemId: Int) {
         viewModelScope.launch {
             repository.toggleItemCompleted(itemId)
+        }
+    }
+    
+    // Categories
+    val allCategories: Flow<List<CategoryEntity>> = repository.getAllCategories()
+    
+    fun insertCategory(name: String, color: String = "#6200EE") {
+        viewModelScope.launch {
+            val category = CategoryEntity(
+                name = name,
+                color = color,
+                createdAt = Date(),
+                updatedAt = Date()
+            )
+            repository.insertCategory(category)
+        }
+    }
+    
+    fun updateCategory(category: CategoryEntity) {
+        viewModelScope.launch {
+            repository.updateCategory(category)
+        }
+    }
+    
+    fun deleteCategory(categoryId: Int) {
+        viewModelScope.launch {
+            repository.deleteCategoryById(categoryId)
         }
     }
 }

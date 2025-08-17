@@ -60,7 +60,8 @@ fun SmartCartApp(
         val database = SmartCartDatabase.getDatabase(context)
         val repository = SmartCartRepository(
             database.shoppingListDao(),
-            database.shoppingItemDao()
+            database.shoppingItemDao(),
+            database.categoryDao()
         )
         val seeder = DatabaseSeeder(repository)
         

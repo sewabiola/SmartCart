@@ -146,6 +146,7 @@ fun ListDetailScreen(
     // Add Item Dialog
     if (showAddDialog) {
         AddItemDialog(
+            viewModel = viewModel,
             onDismiss = { showAddDialog = false },
             onAddItem = { itemName, category, quantity ->
                 viewModel.insertItem(listId, itemName, category, quantity)
@@ -157,6 +158,7 @@ fun ListDetailScreen(
     // Edit Item Dialog
     if (showEditDialog && editingItem != null) {
         EditItemDialog(
+            viewModel = viewModel,
             item = editingItem!!,
             onDismiss = { 
                 showEditDialog = false
@@ -273,6 +275,7 @@ fun ShoppingItemCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddItemDialog(
+    viewModel: SmartCartViewModel,
     onDismiss: () -> Unit,
     onAddItem: (String, String, String) -> Unit
 ) {
@@ -281,10 +284,8 @@ fun AddItemDialog(
     var quantity by remember { mutableStateOf("1") }
     var expanded by remember { mutableStateOf(false) }
     
-    val categories = listOf(
-        "General", "Fruits & Vegetables", "Dairy", "Meat", "Bakery", 
-        "Pantry", "Frozen", "Snacks", "Beverages", "Household"
-    )
+    val categoriesFromDb by viewModel.allCategories.collectAsState(initial = emptyList())
+    val categories = categoriesFromDb.map { it.name }
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -364,6 +365,7 @@ fun AddItemDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditItemDialog(
+    viewModel: SmartCartViewModel,
     item: ShoppingItemEntity,
     onDismiss: () -> Unit,
     onSave: (ShoppingItemEntity) -> Unit
@@ -373,10 +375,8 @@ fun EditItemDialog(
     var quantity by remember { mutableStateOf(item.quantity) }
     var expanded by remember { mutableStateOf(false) }
     
-    val categories = listOf(
-        "General", "Fruits & Vegetables", "Dairy", "Meat", "Bakery", 
-        "Pantry", "Frozen", "Snacks", "Beverages", "Household"
-    )
+    val categoriesFromDb by viewModel.allCategories.collectAsState(initial = emptyList())
+    val categories = categoriesFromDb.map { it.name }
     
     AlertDialog(
         onDismissRequest = onDismiss,
